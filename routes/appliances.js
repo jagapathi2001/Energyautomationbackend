@@ -1,6 +1,8 @@
 const express=require('express');
 const router=express.Router();
 const applianceModel=require('../models/appliances.js')
+const fs = require('fs');
+const os = require('os');
 
 const path = require("path");
 const GoogleAssistant = require("google-assistant");
@@ -86,9 +88,42 @@ router.get('/appliances', async (req, res) => {
 });
 
 
+const createTempConfigFiles = () => {
+  const clientConfig = {
+    "installed": {
+      "client_id": process.env.GOOGLE_CLIENT_ID,
+      "project_id": process.env.GOOGLE_PROJECT_ID,
+      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+      "token_uri": "https://oauth2.googleapis.com/token",
+      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+      "client_secret": process.env.GOOGLE_CLIENT_SECRET,
+      "redirect_uris": [process.env.REDIRECT_URI || "http://localhost"]
+    }
+  };
 
-const clientConfig = path.resolve(__dirname, "../client_secret_176161973996-ag09lhj23lcn850di3qarrccqkva6o9s.apps.googleusercontent.com.json");
-const authConfig = path.resolve(__dirname, "../oauth2.json");
+  // Create OAuth token config from environment variables
+  const tokenConfig = {
+    "access_token": process.env.ACCESS_TOKEN,
+    "refresh_token": process.env.REFRESH_TOKEN,
+    "token_type": process.env.TOKEN_TYPE || "Bearer",
+    "expiry_date": parseInt(process.env.EXPIRY_DATE) || Date.now() + 3600000
+  };
+
+  const tempDir = os.tmpdir();
+  const clientConfigPath = path.join(tempDir, `client_secret_${Date.now()}.json`);
+  const authConfigPath = path.join(tempDir, `oauth2_${Date.now()}.json`);
+  
+  // Write both config files
+  fs.writeFileSync(clientConfigPath, JSON.stringify(clientConfig, null, 2));
+  fs.writeFileSync(authConfigPath, JSON.stringify(tokenConfig, null, 2));
+  
+  return { clientConfigPath, authConfigPath };
+};
+
+
+// const clientConfig = path.resolve(__dirname, "../client_secret_176161973996-ag09lhj23lcn850di3qarrccqkva6o9s.apps.googleusercontent.com.json");
+// const authConfig = path.resolve(__dirname, "../oauth2.json");
+
 
 
 const startConversation = (conversation) => {
@@ -139,10 +174,11 @@ const sendCommand= (command,res) => {
   if (!command) {
     return res.status(400).json({ message: "Command not provided" });
   }
+    const { clientConfigPath, authConfigPath } = createTempConfigFiles();
 
   const assistant = new GoogleAssistant({
-    keyFilePath: clientConfig,
-    savedTokensPath: authConfig
+    keyFilePath: clientConfigPath,
+    savedTokensPath: authConfigPath
   });
 
   const conversationConfig = {
