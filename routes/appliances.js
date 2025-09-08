@@ -47,15 +47,15 @@ router.post('/control-appliance',async(req,res)=>{
     }
     try
     {
-        const exist=await applianceModel.findOne({userid:id});
-        if(!exist)
+      const appliances=await applianceModel.find({userid:id});
+        if(!appliances)
             return res.status(400).json({success:false,message:'No appliance found with associated id!'});
 
-        const command= `Turn ${status===false?'off':'on'} ${exist.name}`;
-
-        console.log('command',command,status);
-        sendCommand(command,res);
-        // console.log('exist',exist);
+        appliances.forEach(appliance => {
+        const command = `Turn ${status === false ? 'off' : 'on'} ${appliance.name}`;
+        console.log('command', command, status, appliance.name);
+        sendCommand(command, res);
+    });
         await applianceModel.updateMany({userid:id},{$set:{status}})
 
         return res.status(200).json({success:true,message:'All Appliances turned on!'});
