@@ -14,10 +14,10 @@ db();
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 
-
 app.use(cors({
-    origin:true,
-    credentials:true
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use('/',authentication);
 app.use('/cords',home);
